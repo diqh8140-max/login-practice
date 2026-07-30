@@ -1,35 +1,81 @@
-body{
-    font-family:Arial,sans-serif;
-    background-color:#eeeeee;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    min-height:100vh;
-    margin:0;
-}
-.login-box{
-    width:300px;
-    background-color:white;
-    padding:30px;
-    border-radius:12px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.15);
-
-}
-label{
-    display:block;
-    margin-top:15px;
-    margin-bottom:5px;
-
+* {
+    box-sizing: border-box;
 }
 
-input{
-    width:100%;
-    padding:10px;
-    box-sizing:border-box;
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f2f4f8;
+    font-family: Arial, sans-serif;
 }
-button{
-    width:100%;
-    padding:10px;
-    margin-top:20px;
-    cursor:pointer;
+
+.container {
+    width: 360px;
+    padding: 30px;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+h1 {
+    margin-top: 0;
+    text-align: center;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+label {
+    margin-top: 8px;
+    font-weight: bold;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    font-size: 16px;
+}
+
+button {
+    padding: 10px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 6px;
+    background-color: #2563eb;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #1d4ed8;
+}
+
+.password-container {
+    display: flex;
+    gap: 8px;
+}
+
+.password-container button {
+    width: 80px;
+    margin-top: 0;
+}
+
+#message,
+#register-message {
+    min-height: 24px;
+    text-align: center;
+}
+
+.switch-page {
+    margin-top: 20px;
+    text-align: center;
 }

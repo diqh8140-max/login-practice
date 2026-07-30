@@ -23,8 +23,20 @@ loginForm.addEventListener("submit",function(event){
         message.textContent = "password needs at least six characters";
         return;
     }
-    message.style.color = "green";
-    message.textContent = "Enter button are function normally"
+    const savedUsername = localStorage.getItem("username");
+    const savedPassword = localStorage.getItem("password");
+    if (savedUsername === null || savePassword === null){
+        showMessage("No account found, please register first.","red");
+        return;
+    }
+    if (username === savedUsername && password === savedPassword){
+        showMessage("Login successful!","green");
+        setTimeout(function(){
+            windoe.location.href = "welcome.html";
+        },1000);
+        return;
+    }
+    showMessage("Incorrect username or password","red");
 });
 showPasswordButton.addEventListener("click",function(){
     if (passwordInput.type === "password"){
@@ -35,3 +47,8 @@ showPasswordButton.addEventListener("click",function(){
         showPasswordButton.textContent = "show password";
     }
 });
+
+function showMessage(text,color){
+    message.textContent = text;
+    message.sytle.color = color;
+}
