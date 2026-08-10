@@ -1,7 +1,7 @@
 const registerForm = document.querySelector("#register-form");
 const usernameInput = document.querySelector("#register-username");
-const passwordInput = document.querySelector("register-password");
-const confirmPasswordInput = document.querySelector("confirm-password");
+const passwordInput = document.querySelector("#register-password");
+const confirmPasswordInput = document.querySelector("#confirm-password");
 const message = document.querySelector("#register-message");
 
 registerForm.addEventListener("submit",function(event){
@@ -30,16 +30,27 @@ registerForm.addEventListener("submit",function(event){
         showMessage("Password do not match","red");
         return;
     }
-    const existingUsername = localStorage.getItem("username");
-    if (existingUsername === username){
+    //const existingUsername = localStorage.getItem("username");
+    //if (existingUsername === username){
+    let users = JSON.parse(localStorage.getItem("users")) || [];
+    const existingUser = users.find(function(user) {
+        return user.username === username;
+    });
+    if (existingUser){
         showMessage("This username already exists","red");
         return;
     }
-    localStorage.setItem("username",username);
-    localStorage.setItem("password",password);
+    //localStorage.setItem("username",username);
+    //localStorage.setItem("password",password);
+    const newUser = {
+        username:username,
+        password:password,
+    };
+    users.push(newUser);
+    localStorage.setItem("users",JSON.stringify(users));
     showMessage("Account created successfully! Redirecting to login...","green");
     setTimeout(function(){
-        window.locatin.href="index.html";
+        window.location.href="index.html";
     },1500);
 });
 

@@ -8,35 +8,46 @@ loginForm.addEventListener("submit",function(event){
     event.preventDefault();
     const username = usernameInput.value.trim();
     const password = passwordInput.value;
+    
     if (username === ""){
-        message.style.color = "red";
-        message.textContent = "please enter username";
+        showMessage("Please enter a username", "red");
         return;
     }
     if (password === ""){
-        message.style.color = "red";
-        message.textContent = "please enter password";
+        showMessage("Please enter password", "red");
         return;
     } 
     if (password.length<6){
-        message.style.color = "red";
-        message.textContent = "password needs at least six characters";
+        showMessage("password need at least six characters", "red");
         return;
     }
-    const savedUsername = localStorage.getItem("username");
-    const savedPassword = localStorage.getItem("password");
-    if (savedUsername === null || savePassword === null){
-        showMessage("No account found, please register first.","red");
-        return;
-    }
-    if (username === savedUsername && password === savedPassword){
-        showMessage("Login successful!","green");
+    //const savedUsername = localStorage.getItem("username");
+    //const savedPassword = localStorage.getItem("password");
+    //if (savedUsername === null || savedPassword === null){
+    //    showMessage("No account found, please register first.","red");
+    //   return;
+    //}
+    //if (username === savedUsername && password === savedPassword){
+    //    showMessage("Login successful!","green");
+    //    setTimeout(function(){
+    //        window.location.href = "welcome.html";
+    //    },1000);
+    //    return;
+    //}
+    //showMessage("Incorrect username or password","red");
+    const users = JSON.parse(localStorage.getItem("users"))||[];
+    const matchedUser = users.find(function(user){
+        return user.username === username &&
+               user.password === password;
+    });
+    if (matchedUser){
+        showMessage("Login successful","green");
         setTimeout(function(){
-            windoe.location.href = "welcome.html";
+            window.location.href ="welcome.html";
         },1000);
         return;
     }
-    showMessage("Incorrect username or password","red");
+    showMessage("Incorrect username or password","red")
 });
 showPasswordButton.addEventListener("click",function(){
     if (passwordInput.type === "password"){
@@ -50,5 +61,5 @@ showPasswordButton.addEventListener("click",function(){
 
 function showMessage(text,color){
     message.textContent = text;
-    message.sytle.color = color;
+    message.style.color = color;
 }
