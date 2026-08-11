@@ -71,7 +71,7 @@ login-practice/
 ├── .gitignore
 └── README.md
 
-How It Works
+### How It Works
 Registration
 User enters a username and password.
 The frontend sends the data to /api/register.
@@ -93,3 +93,17 @@ req.session.username = user.username;
 The browser receives a session cookie and sends it automatically with later requests.
 
 Protected API routes use the session to determine which user is logged in.
+
+### What I Learned
+
+This project helped me practice:
+
+Connecting frontend and backend code with HTTP requests
+Building REST-style API endpoints with Express
+Working with PostgreSQL
+Password hashing and verification
+Session and cookie authentication
+Protecting backend routes
+Environment variables
+Deploying a Node.js application to Render
+Debugging deployment and database issues
