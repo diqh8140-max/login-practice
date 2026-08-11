@@ -9,21 +9,34 @@ const app = express();
 // ==========================
 // Middleware
 // ==========================
+app.set("trust proxy", 1);
 
 app.use(express.json());
 app.use(
-    session({
-        secret: "change-this-to-a-long-random-secret",
-        resave: false,
-        saveUninitialized: false,
+    //session({
+    //    secret: "change-this-to-a-long-random-secret",
+    //    resave: false,
+    //    saveUninitialized: false,
 
-        cookie: {
-            httpOnly: true,
-            sameSite: "lax",
-            secure: false,
-            maxAge: 1000 * 60 * 60
-        }
-    })
+    //    cookie: {
+    //        httpOnly: true,
+    //        sameSite: "lax",
+    //        secure: false,
+    //        maxAge: 1000 * 60 * 60
+    //   }
+    //})
+    session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+
+    cookie: {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 1000 * 60 * 60
+    }
+})
 );
 app.use(express.static("public"));
 
@@ -329,13 +342,204 @@ app.post("/api/logout", function(req, res) {
         });
     });
 });
+
+function requireLogin(req, res, next) {
+    if (!req.session.userId) {
+        return res.status(401).json({
+            success: false,
+            message: "Please login first"
+        });
+    }
+
+    next();
+}
+
+app.get(
+    "/api/profile",
+    requireLogin,
+    function(req, res) {
+
+        db.get(
+            `
+            SELECT id, username
+            FROM users
+            WHERE id = ?
+            `,
+            [req.session.userId],
+            function(error, user) {
+
+                if (error) {
+                    console.error(error);
+
+                    return res.status(500).json({
+                        success: false,
+                        message: "Database error"
+                    });
+                }
+
+                if (!user) {
+                    return res.status(404).json({
+                        success: false,
+                        message: "User not found"
+                    });
+                }
+
+                res.json({
+                    success: true,
+                    user: user
+                });
+            }
+        );
+    }
+);
+
+app.post(
+    "/api/change-password",
+    requireLogin,
+    function(req, res) {
+
+        const currentPassword =
+            req.body.currentPassword;
+
+        const newPassword =
+            req.body.newPassword;
+
+
+        if (!currentPassword || !newPassword) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Current password and new password are required"
+            });
+        }
+
+
+        if (newPassword.length < 6) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    "New password must contain at least 6 characters"
+            });
+        }
+
+
+        db.get(
+            `
+            SELECT *
+            FROM users
+            WHERE id = ?
+            `,
+            [req.session.userId],
+            async function(error, user) {
+
+                if (error) {
+
+                    console.error(error);
+
+                    return res.status(500).json({
+                        success: false,
+                        message: "Database error"
+                    });
+                }
+
+
+                if (!user) {
+
+                    return res.status(404).json({
+                        success: false,
+                        message: "User not found"
+                    });
+                }
+
+
+                try {
+
+                    const correct =
+                        await verifyPassword(
+                            currentPassword,
+                            user.password_hash
+                        );
+
+
+                    if (!correct) {
+
+                        return res.status(401).json({
+                            success: false,
+                            message:
+                                "Current password is incorrect"
+                        });
+                    }
+
+
+                    const newPasswordHash =
+                        await hashPassword(
+                            newPassword
+                        );
+
+
+                    db.run(
+                        `
+                        UPDATE users
+                        SET password_hash = ?
+                        WHERE id = ?
+                        `,
+                        [
+                            newPasswordHash,
+                            req.session.userId
+                        ],
+                        function(error) {
+
+                            if (error) {
+
+                                console.error(error);
+
+                                return res
+                                    .status(500)
+                                    .json({
+                                        success: false,
+                                        message:
+                                            "Could not update password"
+                                    });
+                            }
+
+
+                            res.json({
+                                success: true,
+                                message:
+                                    "Password changed successfully"
+                            });
+                        }
+                    );
+
+
+                } catch (error) {
+
+                    console.error(error);
+
+                    res.status(500).json({
+                        success: false,
+                        message: "Server error"
+                    });
+                }
+            }
+        );
+    }
+);
 // ==========================
 // Start server
 // ==========================
 
-app.listen(3000, function() {
+//app.listen(3000, function() {
 
-    console.log(
-        "Server running at http://localhost:3000"
-    );
+//   console.log(
+//        "Server running at http://localhost:3000"
+//    );
+//});
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, function() {
+    console.log(`Server running on port ${PORT}`);
 });

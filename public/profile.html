@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Profile</title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+</head>
+
+
+<body>
+
+    <main class="container">
+
+        <h1>Profile</h1>
+
+        <p>
+            User ID:
+            <span id="profile-id">
+                Loading...
+            </span>
+        </p>
+
+        <p>
+            Username:
+            <span id="profile-username">
+                Loading...
+            </span>
+        </p>
+
+
+        <h2>Change Password</h2>
+
+        <form id="change-password-form">
+
+            <label for="current-password">
+                Current Password
+            </label>
+
+            <input
+                id="current-password"
+                type="password"
+                placeholder="Enter current password"
+            >
+
+
+            <label for="new-password">
+                New Password
+            </label>
+
+            <input
+                id="new-password"
+                type="password"
+                placeholder="Enter new password"
+            >
+
+
+            <label for="confirm-new-password">
+                Confirm New Password
+            </label>
+
+            <input
+                id="confirm-new-password"
+                type="password"
+                placeholder="Enter new password again"
+            >
+
+
+            <button type="submit">
+                Change Password
+            </button>
+
+        </form>
+
+
+        <p id="password-message"></p>
+
+
+        <p>
+            <a href="welcome.html">
+                Back
+            </a>
+        </p>
+
+    </main>
+
+
+    <script src="profile.js"></script>
+
+</body>
+
+</html>
