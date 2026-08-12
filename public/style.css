@@ -120,3 +120,16 @@ h2 {
     min-height: 24px;
     text-align: center;
 }
+.forgot-password {
+    margin: 4px 0;
+    text-align: right;
+}
+
+.forgot-password a {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.forgot-password a:hover {
+    text-decoration: underline;
+}
