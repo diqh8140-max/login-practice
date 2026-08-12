@@ -90,6 +90,16 @@ async function initializeDatabase() {
             ADD COLUMN IF NOT EXISTS verification_expires TIMESTAMP
         `);
 
+        await pool.query(`
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS password_reset_token_hash TEXT
+        `);
+
+        await pool.query(`
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMP
+        `);
+
         console.log("Database initialized");
 
     } catch (error) {
@@ -254,6 +264,11 @@ function hashToken(token) {
         .digest("hex");
 }
 
+function generateResetToken() {
+    return crypto
+        .randomBytes(32)
+        .toString("hex");
+}
 
 // ========================================
 // REGISTER
@@ -1107,6 +1122,305 @@ app.get(
             res.status(500).send(
                 "Server error"
             );
+        }
+    }
+);
+
+async function sendPasswordResetEmail(
+    email,
+    token
+) {
+
+    const resetUrl =
+        `${process.env.APP_URL}` +
+        `/reset-password.html?token=` +
+        encodeURIComponent(token);
+
+
+    const { error } =
+        await resend.emails.send({
+
+            from:
+                "Login Practice <onboarding@resend.dev>",
+
+            to: email,
+
+            subject:
+                "Reset your password",
+
+            text:
+                "You requested a password reset.\n\n" +
+                "Open this link to reset your password:\n\n" +
+                resetUrl +
+                "\n\n" +
+                "This link will expire in 30 minutes."
+        });
+
+
+    if (error) {
+        throw error;
+    }
+}
+
+app.post(
+    "/api/forgot-password",
+    async function(req, res) {
+
+        const email =
+            typeof req.body.email === "string"
+                ? req.body.email
+                    .trim()
+                    .toLowerCase()
+                : "";
+
+
+        const genericMessage =
+            "If an account exists for that email, a password reset link has been sent.";
+
+
+        if (
+            email.length === 0 ||
+            email.length > 254
+        ) {
+
+            return res.json({
+                success: true,
+                message: genericMessage
+            });
+        }
+
+
+        try {
+
+            const result =
+                await pool.query(
+                    `
+                    SELECT id, email
+                    FROM users
+                    WHERE email = $1
+                    `,
+                    [email]
+                );
+
+
+            const user =
+                result.rows[0];
+
+
+            // 不告诉前端 email 不存在
+            if (!user) {
+
+                return res.json({
+                    success: true,
+                    message: genericMessage
+                });
+            }
+
+
+            const resetToken =
+                generateResetToken();
+
+
+            const resetTokenHash =
+                hashToken(resetToken);
+
+
+            const resetExpires =
+                new Date(
+                    Date.now() +
+                    30 * 60 * 1000
+                );
+
+
+            await pool.query(
+                `
+                UPDATE users
+
+                SET
+                    password_reset_token_hash = $1,
+                    password_reset_expires = $2
+
+                WHERE id = $3
+                `,
+                [
+                    resetTokenHash,
+                    resetExpires,
+                    user.id
+                ]
+            );
+
+
+            await sendPasswordResetEmail(
+                user.email,
+                resetToken
+            );
+
+
+            res.json({
+                success: true,
+                message: genericMessage
+            });
+
+
+        } catch (error) {
+
+            console.error(
+                "Forgot password error:",
+                error
+            );
+
+
+            // 对用户仍然可以保持 generic
+            res.json({
+                success: true,
+                message: genericMessage
+            });
+        }
+    }
+);
+
+const passwordResetLimiter =
+    rateLimit({
+
+        windowMs:
+            60 * 60 * 1000,
+
+        limit: 5,
+
+        standardHeaders:
+            "draft-8",
+
+        legacyHeaders:
+            false,
+
+        message: {
+            success: false,
+            message:
+                "Too many password reset requests. Please try again later."
+        }
+    });
+
+app.post(
+    "/api/reset-password",
+    passwordResetLimiter,
+    async function(req, res) {
+
+        const token =
+            req.body.token;
+
+        const newPassword =
+            req.body.newPassword;
+
+
+        if (
+            typeof token !== "string" ||
+            token.length === 0
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Invalid or expired password reset link"
+            });
+        }
+
+
+        if (
+            typeof newPassword !== "string" ||
+            newPassword.length < 8 ||
+            newPassword.length > 128
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Password must be between 8 and 128 characters"
+            });
+        }
+
+
+        const tokenHash =
+            hashToken(token);
+
+
+        try {
+
+            // 1. 找拥有这个 token 的用户
+            const result =
+                await pool.query(
+                    `
+                    SELECT id
+                    FROM users
+
+                    WHERE
+                        password_reset_token_hash = $1
+
+                    AND
+                        password_reset_expires > NOW()
+                    `,
+                    [tokenHash]
+                );
+
+
+            const user =
+                result.rows[0];
+
+
+            if (!user) {
+
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Invalid or expired password reset link"
+                });
+            }
+
+
+            // 2. hash 新密码
+            const newPasswordHash =
+                await hashPassword(
+                    newPassword
+                );
+
+
+            // 3. 更新 password，并让 token 立即失效
+            await pool.query(
+                `
+                UPDATE users
+
+                SET
+                    password_hash = $1,
+                    password_reset_token_hash = NULL,
+                    password_reset_expires = NULL
+
+                WHERE id = $2
+                `,
+                [
+                    newPasswordHash,
+                    user.id
+                ]
+            );
+
+
+            res.json({
+                success: true,
+                message:
+                    "Password reset successfully. You can now log in."
+            });
+
+
+        } catch (error) {
+
+            console.error(
+                "Reset password error:",
+                error
+            );
+
+
+            res.status(500).json({
+                success: false,
+                message: "Server error"
+            });
         }
     }
 );
