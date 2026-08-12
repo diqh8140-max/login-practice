@@ -794,6 +794,117 @@ app.post(
     }
 );
 
+app.post(
+    "/api/delete-account",
+    requireLogin,
+    async function(req, res) {
+
+        const password = req.body.password;
+
+        if (
+            typeof password !== "string" ||
+            password.length === 0
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Password is required"
+            });
+        }
+
+        if (password.length > 128) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid password"
+            });
+        }
+
+        try {
+
+            // 1. 找当前登录用户
+            const result = await pool.query(
+                `
+                SELECT *
+                FROM users
+                WHERE id = $1
+                `,
+                [req.session.userId]
+            );
+
+            const user = result.rows[0];
+
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User not found"
+                });
+            }
+
+
+            // 2. 验证当前密码
+            const correct =
+                await verifyPassword(
+                    password,
+                    user.password_hash
+                );
+
+            if (!correct) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Incorrect password"
+                });
+            }
+
+
+            // 3. 删除用户
+            await pool.query(
+                `
+                DELETE FROM users
+                WHERE id = $1
+                `,
+                [req.session.userId]
+            );
+
+
+            // 4. 删除 session
+            req.session.destroy(function(error) {
+
+                if (error) {
+                    console.error(
+                        "Session destroy error:",
+                        error
+                    );
+
+                    return res.status(500).json({
+                        success: false,
+                        message:
+                            "Account deleted, but logout failed"
+                    });
+                }
+
+                res.clearCookie("connect.sid");
+
+                res.json({
+                    success: true,
+                    message:
+                        "Account deleted successfully"
+                });
+            });
+
+        } catch (error) {
+
+            console.error(
+                "Delete account error:",
+                error
+            );
+
+            res.status(500).json({
+                success: false,
+                message: "Server error"
+            });
+        }
+    }
+);
+
 
 // ========================================
 // Start server

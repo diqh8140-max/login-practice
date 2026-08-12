@@ -107,3 +107,16 @@ h2 {
 .page-button:hover {
     background-color: #1d4ed8;
 }
+
+.danger-button {
+    background-color: #dc2626;
+}
+
+.danger-button:hover {
+    background-color: #b91c1c;
+}
+
+#delete-message {
+    min-height: 24px;
+    text-align: center;
+}

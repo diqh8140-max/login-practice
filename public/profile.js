@@ -19,6 +19,15 @@ const confirmNewPasswordInput =
 const passwordMessage =
     document.querySelector("#password-message");
 
+const deleteAccountForm =
+    document.querySelector("#delete-account-form");
+
+const deletePasswordInput =
+    document.querySelector("#delete-password");
+
+const deleteMessage =
+    document.querySelector("#delete-message");
+
 
 // ==========================
 // Load profile
@@ -192,6 +201,97 @@ changePasswordForm.addEventListener(
     }
 );
 
+deleteAccountForm.addEventListener(
+    "submit",
+    async function(event) {
+
+        event.preventDefault();
+
+        const password =
+            deletePasswordInput.value;
+
+        if (password === "") {
+            showDeleteMessage(
+                "Please enter your password",
+                "red"
+            );
+
+            return;
+        }
+
+
+        const confirmed =
+            window.confirm(
+                "Are you sure you want to permanently delete your account?"
+            );
+
+
+        if (!confirmed) {
+            return;
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/delete-account",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            password: password
+                        })
+                    }
+                );
+
+
+            const result =
+                await response.json();
+
+
+            if (!result.success) {
+
+                showDeleteMessage(
+                    result.message,
+                    "red"
+                );
+
+                return;
+            }
+
+
+            showDeleteMessage(
+                result.message,
+                "green"
+            );
+
+
+            setTimeout(function() {
+
+                window.location.href =
+                    "index.html";
+
+            }, 1000);
+
+
+        } catch (error) {
+
+            console.error(error);
+
+            showDeleteMessage(
+                "Could not connect to server",
+                "red"
+            );
+        }
+    }
+);
+
 
 function showPasswordMessage(
     text,
@@ -202,6 +302,15 @@ function showPasswordMessage(
         text;
 
     passwordMessage.style.color =
+        color;
+}
+
+function showDeleteMessage(text, color) {
+
+    deleteMessage.textContent =
+        text;
+
+    deleteMessage.style.color =
         color;
 }
 
