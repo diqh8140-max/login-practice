@@ -2,6 +2,7 @@ const express = require("express");
 const crypto = require("node:crypto");
 const session = require("express-session");
 const { Pool } = require("pg");
+const { rateLimit } = require("express-rate-limit");
 const pgSession = require("connect-pg-simple")(session);
 
 const app = express();
@@ -186,6 +187,23 @@ function verifyPassword(
 // Login middleware
 // ========================================
 
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+
+    limit: 10,
+
+    skipSuccessfulRequests: true,
+
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+
+    message: {
+        success: false,
+        message:
+            "Too many login attempts. Please try again later."
+    }
+});
+
 function requireLogin(req, res, next) {
 
     if (!req.session.userId) {
@@ -363,6 +381,7 @@ app.post(
 
 app.post(
     "/api/login",
+    loginLimiter,
     async function(req, res) {
 
         const username =
