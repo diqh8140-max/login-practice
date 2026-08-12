@@ -28,6 +28,7 @@ const deletePasswordInput =
 const deleteMessage =
     document.querySelector("#delete-message");
 
+let csrfToken = null;
 
 // ==========================
 // Load profile
@@ -148,7 +149,10 @@ changePasswordForm.addEventListener(
 
                         headers: {
                             "Content-Type":
-                                "application/json"
+                                "application/json",
+                            "X-CSRF-Token":
+                                csrfToken
+
                         },
 
                         body:
@@ -241,7 +245,10 @@ deleteAccountForm.addEventListener(
 
                         headers: {
                             "Content-Type":
-                                "application/json"
+                                "application/json",
+
+                            "X-CSRF-Token":
+                                csrfToken
                         },
 
                         body: JSON.stringify({
@@ -314,5 +321,36 @@ function showDeleteMessage(text, color) {
         color;
 }
 
+async function loadCsrfToken() {
+
+    try {
+
+        const response =
+            await fetch("/api/csrf-token");
+
+        const result =
+            await response.json();
+
+
+        if (!result.success) {
+            throw new Error(
+                "Could not get CSRF token"
+            );
+        }
+
+
+        csrfToken =
+            result.csrfToken;
+
+
+    } catch (error) {
+
+        console.error(
+            "CSRF token error:",
+            error
+        );
+    }
+}
 
 loadProfile();
+loadCsrfToken();

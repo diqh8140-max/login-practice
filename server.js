@@ -51,6 +51,62 @@ app.use(
 
 app.use(express.static("public"));
 
+function requireCsrf(req, res, next) {
+
+    const sessionToken =
+        req.session.csrfToken;
+
+    const requestToken =
+        req.get("X-CSRF-Token");
+
+
+    if (
+        !sessionToken ||
+        !requestToken
+    ) {
+        return res.status(403).json({
+            success: false,
+            message: "Invalid CSRF token"
+        });
+    }
+
+
+    const sessionBuffer =
+        Buffer.from(sessionToken);
+
+    const requestBuffer =
+        Buffer.from(requestToken);
+
+
+    if (
+        sessionBuffer.length !==
+        requestBuffer.length
+    ) {
+        return res.status(403).json({
+            success: false,
+            message: "Invalid CSRF token"
+        });
+    }
+
+
+    const valid =
+        crypto.timingSafeEqual(
+            sessionBuffer,
+            requestBuffer
+        );
+
+
+    if (!valid) {
+        return res.status(403).json({
+            success: false,
+            message: "Invalid CSRF token"
+        });
+    }
+
+
+    next();
+}
+
 
 // ========================================
 // Initialize database
@@ -703,7 +759,7 @@ app.get(
 app.post(
     "/api/change-password",
     requireLogin,
-
+    requireCsrf,
     async function(req, res) {
 
         const currentPassword =
@@ -864,6 +920,8 @@ app.post(
 
 app.post(
     "/api/logout",
+    requireLogin,
+    requireCsrf,
     function(req, res) {
 
         req.session.destroy(
@@ -903,6 +961,7 @@ app.post(
 app.post(
     "/api/delete-account",
     requireLogin,
+    requireCsrf,
     async function(req, res) {
 
         const password = req.body.password;
@@ -1424,6 +1483,24 @@ app.post(
         }
     }
 );
+
+app.get("/api/csrf-token", function(req, res) {
+    const token = getCsrfToken(req);
+
+    res.json({
+        success: true,
+        csrfToken: token
+    });
+});
+
+function getCsrfToken(req) {
+    if (!req.session.csrfToken) {
+        req.session.csrfToken =
+            crypto.randomBytes(32).toString("hex");
+    }
+
+    return req.session.csrfToken;
+}
 
 // ========================================
 // Start server

@@ -4,7 +4,8 @@ const welcomeMessage =
 const logoutButton =
     document.querySelector("#logout-button");
 
-
+let csrfToken = null;
+    
 async function checkLogin() {
 
     try {
@@ -41,7 +42,12 @@ logoutButton.addEventListener(
 
         const response =
             await fetch("/api/logout", {
-                method: "POST"
+                method: "POST",
+
+                headers: {
+                    "X-CSRF-Token":
+                        csrfToken
+                }
             });
 
         const result =
@@ -64,4 +70,18 @@ function requireLogin(req, res, next) {
 
     next();
 }
+
+async function loadCsrfToken() {
+
+    const response =
+        await fetch("/api/csrf-token");
+
+    const result =
+        await response.json();
+
+    csrfToken =
+        result.csrfToken;
+}
+
 checkLogin();
+loadCsrfToken();
