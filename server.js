@@ -2,6 +2,7 @@ const express = require("express");
 const crypto = require("node:crypto");
 const session = require("express-session");
 const { Pool } = require("pg");
+const pgSession = require("connect-pg-simple")(session);
 
 const app = express();
 
@@ -25,6 +26,12 @@ app.use(express.json());
 
 app.use(
     session({
+
+        store: new pgSession({
+            pool: pool,
+            createTableIfMissing: true
+        }),
+
         secret: process.env.SESSION_SECRET,
 
         resave: false,
@@ -33,11 +40,7 @@ app.use(
         cookie: {
             httpOnly: true,
             sameSite: "lax",
-
-            // Render 是 HTTPS
             secure: process.env.NODE_ENV === "production",
-
-            // 1 hour
             maxAge: 1000 * 60 * 60
         }
     })
