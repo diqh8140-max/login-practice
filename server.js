@@ -4,7 +4,8 @@ const session = require("express-session");
 const { Pool } = require("pg");
 const { rateLimit } = require("express-rate-limit");
 const pgSession = require("connect-pg-simple")(session);
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const app = express();
 
@@ -995,43 +996,21 @@ app.post(
     }
 );
 
-const transporter =
-    nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT),
-
-        secure:
-            process.env.SMTP_SECURE === "true",
-
-        auth: {
-            user:
-                process.env.SMTP_USER,
-
-            pass:
-                process.env.SMTP_PASS
-        }
-    });
 
 async function sendVerificationEmail(
     email,
     token
 ) {
-
     const verificationUrl =
         `${process.env.APP_URL}` +
         `/verify-email?token=${encodeURIComponent(token)}`;
 
-
-    await transporter.sendMail({
-        from: process.env.EMAIL_FROM,
-
+    await resend.emails.send({
+        from: "Login Practice <onboarding@resend.dev>",
         to: email,
-
-        subject:
-            "Verify your email address",
-
+        subject: "Verify your email",
         text:
-            `Verify your email by opening this link:\n\n` +
+            "Please verify your email:\n\n" +
             verificationUrl
     });
 }

@@ -24,8 +24,8 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.6.2",
     "express-session": "^1.19.0",
-    "nodemailer": "^9.0.5",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "resend": "^6.19.0"
   },
   "allowScripts": {
     "sqlite3@6.0.1": true
