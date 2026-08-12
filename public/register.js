@@ -35,16 +35,29 @@ registerForm.addEventListener(
         // ========================
 
         if (username === "") {
+        showMessage(
+            "Please enter a username",
+            "red"
+        );
+        return;
+        }
+
+        if (
+            username.length < 3 ||
+            username.length > 30
+        ) {
             showMessage(
-                "Please enter a username",
+                "Username must be between 3 and 30 characters",
                 "red"
             );
             return;
         }
 
-        if (username.length < 3) {
+        if (
+            !/^[A-Za-z0-9_-]+$/.test(username)
+        ) {
             showMessage(
-                "Username must contain at least 3 characters",
+                "Username may only contain letters, numbers, _ and -",
                 "red"
             );
             return;
@@ -58,9 +71,12 @@ registerForm.addEventListener(
             return;
         }
 
-        if (password.length < 6) {
+        if (
+            password.length < 8 ||
+            password.length > 128
+        ) {
             showMessage(
-                "Password must contain at least 6 characters",
+                "Password must be between 8 and 128 characters",
                 "red"
             );
             return;

@@ -37,6 +37,11 @@
                 type="text"
                 id="register-username"
                 placeholder="Choose a username"
+                minlength="3"
+                maxlength="30"
+                pattern="[A-Za-z0-9_-]+"
+                autocomplete="username"
+                required
             >
 
 
@@ -48,6 +53,10 @@
                 type="password"
                 id="register-password"
                 placeholder="Choose a password"
+                minlength="8"
+                maxlength="128"
+                autocomplete="new-password"
+                required
             >
 
 
@@ -59,6 +68,10 @@
                 type="password"
                 id="confirm-password"
                 placeholder="Enter password again"
+                minlength="8"
+                maxlength="128"
+                autocomplete="new-password"
+                required
             >
 
 

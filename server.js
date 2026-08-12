@@ -209,40 +209,65 @@ app.post(
     async function(req, res) {
 
         const username =
-            req.body.username?.trim();
+            typeof req.body.username === "string"
+                ? req.body.username.trim()
+                : "";
 
         const password =
             req.body.password;
 
-
-        if (!username || !password) {
-
+        if (username.length === 0) {
             return res.status(400).json({
                 success: false,
-                message:
-                    "Username and password are required"
+                message: "Username is required"
             });
         }
 
-
-        if (username.length < 3) {
-
+        if (
+            username.length < 3 ||
+            username.length > 30
+        ) {
             return res.status(400).json({
                 success: false,
                 message:
-                    "Username must contain at least 3 characters"
+                    "Username must be between 3 and 30 characters"
             });
         }
 
-
-        if (password.length < 6) {
-
+        if (
+            !/^[A-Za-z0-9_-]+$/.test(username)
+        ) {
             return res.status(400).json({
                 success: false,
                 message:
-                    "Password must contain at least 6 characters"
+                    "Username may only contain letters, numbers, _ and -"
             });
         }
+
+        if (
+            typeof password !== "string" ||
+            password.length === 0
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Password is required"
+            });
+        }
+
+        if (
+            password.length < 8 ||
+            password.length > 128
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Password must be between 8 and 128 characters"
+            });
+        }
+
+        
+    }
+);
 
 
         try {
@@ -342,18 +367,32 @@ app.post(
     async function(req, res) {
 
         const username =
-            req.body.username?.trim();
+        typeof req.body.username === "string"
+        ? req.body.username.trim()
+        : "";
 
         const password =
             req.body.password;
 
-
-        if (!username || !password) {
-
+        if (
+            username.length === 0 ||
+            typeof password !== "string" ||
+            password.length === 0
+        ) {
             return res.status(400).json({
                 success: false,
                 message:
                     "Username and password are required"
+            });
+        }
+
+        if (
+            username.length > 30 ||
+            password.length > 128
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid login input"
             });
         }
 
@@ -550,24 +589,45 @@ app.post(
             req.body.newPassword;
 
 
-        if (!currentPassword || !newPassword) {
-
+        if (
+            typeof currentPassword !== "string" ||
+            currentPassword.length === 0
+        ) {
             return res.status(400).json({
                 success: false,
                 message:
-                    "Current password and new password are required"
+                    "Current password is required"
             });
         }
 
-
-        if (newPassword.length < 6) {
-
+        if (
+            typeof newPassword !== "string" ||
+            newPassword.length === 0
+        ) {
             return res.status(400).json({
                 success: false,
                 message:
-                    "New password must contain at least 6 characters"
+                    "New password is required"
             });
         }
+
+        if (
+            newPassword.length < 8 ||
+            newPassword.length > 128
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "New password must be between 8 and 128 characters"
+            });
+        }
+        if (currentPassword === newPassword) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "New password must be different from current password"
+        });
+}
 
 
         try {
