@@ -13,6 +13,8 @@ const confirmPasswordInput =
 const message =
     document.querySelector("#register-message");
 
+const emailInput =
+    document.querySelector("#register-email");
 
 registerForm.addEventListener(
     "submit",
@@ -29,7 +31,8 @@ registerForm.addEventListener(
         const confirmPassword =
             confirmPasswordInput.value;
 
-
+        const email =
+            emailInput.value.trim().toLowerCase();
         // ========================
         // 前端输入检查
         // ========================
@@ -89,7 +92,22 @@ registerForm.addEventListener(
             );
             return;
         }
+        
+        if (email === "") {
+            showMessage(
+                "Please enter an email",
+                "red"
+            );
+            return;
+        }
 
+        if (!emailInput.validity.valid) {
+            showMessage(
+                "Please enter a valid email",
+                "red"
+            );
+            return;
+        }
 
         // ========================
         // 发送给后端
@@ -109,6 +127,7 @@ registerForm.addEventListener(
 
                     body: JSON.stringify({
                         username: username,
+                        email: email,
                         password: password
                     })
                 });

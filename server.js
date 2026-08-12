@@ -4,6 +4,7 @@ const session = require("express-session");
 const { Pool } = require("pg");
 const { rateLimit } = require("express-rate-limit");
 const pgSession = require("connect-pg-simple")(session);
+const nodemailer = require("nodemailer");
 
 const app = express();
 
@@ -65,6 +66,27 @@ async function initializeDatabase() {
                 password_hash TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
+        `);
+
+        await pool.query(`
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS email TEXT UNIQUE
+        `);
+
+        await pool.query(`
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS email_verified BOOLEAN
+            DEFAULT FALSE
+        `);
+
+        await pool.query(`
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS verification_token_hash TEXT
+        `);
+
+        await pool.query(`
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS verification_expires TIMESTAMP
         `);
 
         console.log("Database initialized");
@@ -217,6 +239,20 @@ function requireLogin(req, res, next) {
     next();
 }
 
+function generateVerificationToken() {
+    return crypto
+        .randomBytes(32)
+        .toString("hex");
+}
+
+
+function hashToken(token) {
+    return crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
+}
+
 
 // ========================================
 // REGISTER
@@ -229,6 +265,10 @@ app.post(
         const username =
             typeof req.body.username === "string"
                 ? req.body.username.trim()
+                : "";
+        const email =
+            typeof req.body.email === "string"
+                ? req.body.email.trim().toLowerCase()
                 : "";
 
         const password =
@@ -282,9 +322,20 @@ app.post(
                     "Password must be between 8 and 128 characters"
             });
         }
-
         
-  
+        if (email.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Email is required"
+            });
+        }
+
+        if (email.length > 254) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid email"
+            });
+        }
 
 
         try {
@@ -320,7 +371,18 @@ app.post(
 
             const passwordHash =
                 await hashPassword(password);
+            
+            const verificationToken =
+                generateVerificationToken();
 
+            const verificationTokenHash =
+                hashToken(verificationToken);
+
+            const verificationExpires =
+                new Date(
+                    Date.now() +
+                    1000 * 60 * 60
+                );
 
             // ------------------------------
             // Save user
@@ -328,22 +390,42 @@ app.post(
 
             await pool.query(
                 `
-                INSERT INTO users
-                    (username, password_hash)
-                VALUES
-                    ($1, $2)
+                INSERT INTO users (
+                    username,
+                    email,
+                    password_hash,
+                    email_verified,
+                    verification_token_hash,
+                    verification_expires
+                )
+                VALUES (
+                    $1,
+                    $2,
+                    $3,
+                    FALSE,
+                    $4,
+                    $5
+                )
                 `,
                 [
                     username,
-                    passwordHash
+                    email,
+                    passwordHash,
+                    verificationTokenHash,
+                    verificationExpires
                 ]
             );
 
 
+            await sendVerificationEmail(
+                email,
+                verificationToken
+            );
+
             res.json({
                 success: true,
                 message:
-                    "Account created successfully"
+                    "Account created. Please check your email to verify your account."
             });
 
 
@@ -466,6 +548,14 @@ app.post(
                 });
             }
 
+            if (!user.email_verified) {
+
+                return res.status(403).json({
+                    success: false,
+                    message:
+                        "Please verify your email before logging in"
+                });
+            }
 
             // ------------------------------
             // Create session
@@ -905,6 +995,142 @@ app.post(
     }
 );
 
+const transporter =
+    nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT),
+
+        secure:
+            process.env.SMTP_SECURE === "true",
+
+        auth: {
+            user:
+                process.env.SMTP_USER,
+
+            pass:
+                process.env.SMTP_PASS
+        }
+    });
+
+async function sendVerificationEmail(
+    email,
+    token
+) {
+
+    const verificationUrl =
+        `${process.env.APP_URL}` +
+        `/verify-email?token=${encodeURIComponent(token)}`;
+
+
+    await transporter.sendMail({
+        from: process.env.EMAIL_FROM,
+
+        to: email,
+
+        subject:
+            "Verify your email address",
+
+        text:
+            `Verify your email by opening this link:\n\n` +
+            verificationUrl
+    });
+}
+
+app.get(
+    "/verify-email",
+    async function(req, res) {
+
+        const token =
+            req.query.token;
+
+        if (
+            typeof token !== "string" ||
+            token.length === 0
+        ) {
+            return res.status(400).send(
+                "Invalid verification link"
+            );
+        }
+
+
+        const tokenHash =
+            hashToken(token);
+
+
+        try {
+
+            const result =
+                await pool.query(
+                    `
+                    SELECT id
+                    FROM users
+
+                    WHERE
+                        verification_token_hash = $1
+
+                    AND
+                        verification_expires > NOW()
+
+                    AND
+                        email_verified = FALSE
+                    `,
+                    [tokenHash]
+                );
+
+
+            const user =
+                result.rows[0];
+
+
+            if (!user) {
+
+                return res.status(400).send(
+                    "Verification link is invalid or expired."
+                );
+            }
+
+
+            await pool.query(
+                `
+                UPDATE users
+
+                SET
+                    email_verified = TRUE,
+                    verification_token_hash = NULL,
+                    verification_expires = NULL
+
+                WHERE id = $1
+                `,
+                [user.id]
+            );
+
+
+            res.send(`
+                <h1>Email verified!</h1>
+
+                <p>
+                    Your account has been verified.
+                </p>
+
+                <a href="/">
+                    Go to login
+                </a>
+            `);
+
+
+        } catch (error) {
+
+            console.error(
+                "Email verification error:",
+                error
+            );
+
+            res.status(500).send(
+                "Server error"
+            );
+        }
+    }
+);
 
 // ========================================
 // Start server
